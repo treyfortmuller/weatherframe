@@ -2,8 +2,12 @@
   description = "A simple flake-based rust project";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    rust-overlay.url = "github:oxalica/rust-overlay";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
+    flake-utils.url = "github:numtide/flake-utils";
+    rust-overlay = {
+      url = "github:oxalica/rust-overlay";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
@@ -11,34 +15,43 @@
       self,
       nixpkgs,
       rust-overlay,
+      flake-utils,
     }:
-    let
-      system = "x86_64-linux";
-      overlays = [ rust-overlay.overlays.default ];
-      pkgs = import nixpkgs { inherit system overlays; };
 
-      rust = pkgs.rust-bin.stable.latest.default.override {
-        # Optional extensions can be added here
-        extensions = [ ]; # e.g. "llvm-tools-preview"
-        targets = [ ]; # e.g. "thumbv7em-none-eabihf"
-      };
-    in
-    {
-      devShells.${system}.default = pkgs.mkShell {
-        buildInputs = with pkgs; [
-          rust
-        ];
+    flake-utils.lib.eachSystem [ "aarch64-linux" "x86_64-linux" ] (
+      system:
+      let
+        overlays = [ rust-overlay.overlays.default ];
+        pkgs = import nixpkgs { inherit system overlays; };
 
-        # Optional: helpful environment variables for Rust dev
-        # RUST_BACKTRACE = "1";
-        RUST_SRC_PATH = pkgs.rustPlatform.rustLibSrc;
+        rust = pkgs.rust-bin.stable.latest.default.override {
+          # Optional extensions can be added here
+          extensions = [ ]; # e.g. "llvm-tools-preview"
+          targets = [ ]; # e.g. "thumbv7em-none-eabihf"
+        };
+      in
+      {
+        devShells.default = pkgs.mkShell {
+          buildInputs = with pkgs; [
+            rust
+            pkg-config
+            openssl
 
-        shellHook = ''
-          echo "🦀 Evolved into a crab again... shit."
-          rustc --version
-        '';
-      };
+            # TODO (tff): may or may not end up using this as our rendering engine
+            wkhtmltopdf
+          ];
 
-      formatter.${system} = pkgs.nixfmt-tree;
-    };
+          # Optional: helpful environment variables for Rust dev
+          # RUST_BACKTRACE = "1";
+          RUST_SRC_PATH = pkgs.rustPlatform.rustLibSrc;
+
+          shellHook = ''
+            echo "🦀 Evolved into a crab again... shit."
+            rustc --version
+          '';
+        };
+
+        formatter = pkgs.nixfmt-tree;
+      }
+    );
 }

@@ -1,6 +1,15 @@
 [package]
-name = "coldboot"
+name = "weatherframe"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+anyhow = "1.0.100"
+camino = "1.2.1"
+log = "0.4.28"
+openwx = { git = "https://github.com/treyfortmuller/openwx.git" }
+simple_logger = "5.1.0"
+libtatted = { git = "https://github.com/treyfortmuller/tatted.git" }
+clap = { version = "4.5.53", features = ["derive"] }
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.145"
