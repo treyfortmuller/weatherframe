@@ -258,6 +258,9 @@ name = "camino"
 version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "276a59bf2b2c967788139340c9f0c5b12d7fd6630315c15c217e559de85d2609"
+dependencies = [
+ "serde_core",
+]
 
 [[package]]
 name = "cc"
@@ -1143,13 +1146,14 @@ dependencies = [
 [[package]]
 name = "libtatted"
 version = "0.1.0"
-source = "git+https://github.com/treyfortmuller/tatted.git#5d98cf0fa83a2a02ca67e85abde5bd5cc0dfc892"
+source = "git+https://github.com/treyfortmuller/tatted.git#bf98e5e34f5dc2d305bcef759ab9e1a2bbd22250"
 dependencies = [
  "camino",
  "gpiocdev",
  "i2cdev",
  "image",
  "log",
+ "serde",
  "spidev",
  "strum",
  "tabled",

@@ -1,11 +1,15 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use camino::Utf8PathBuf;
 use clap::{Parser, Subcommand};
+use libtatted::{InkyJd79668, Jd79668Config};
 use log::info;
 use openwx::{GeodeticCoords, WeatherUnits};
 use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::BufReader;
+use std::thread;
+use std::time::Duration;
+
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
 struct Cli {
@@ -47,8 +51,14 @@ fn main() -> anyhow::Result<()> {
             // Log messages below the provided level will be filtered out, the RUST_LOG env var is not used here.
             simple_logger::init_with_level(level)?;
 
-            info!("Loading config at path: {}", config_path);
-            let config = ServiceConfig::read_validate_from_path(config_path)?;
+            info!("loading config at path: {}", config_path);
+            let config =
+                ServiceConfig::read_validate_from_path(config_path.clone()).with_context(|| {
+                    format!(
+                        "failed to load service config file from path '{}'",
+                        config_path
+                    )
+                })?;
 
             let service = WeatherFrameService::new(config);
 
@@ -67,6 +77,7 @@ pub struct ServiceConfig {
     pub coords: GeodeticCoords,
     pub units: WeatherUnits,
     pub api_key: String,
+    pub inky: Jd79668Config,
 }
 
 impl Default for ServiceConfig {
@@ -79,6 +90,7 @@ impl Default for ServiceConfig {
             },
             units: WeatherUnits::Imperial,
             api_key: String::from("XXX"),
+            inky: Jd79668Config::default(),
         }
     }
 }
@@ -114,12 +126,33 @@ impl WeatherFrameService {
     }
 
     pub fn run(&self) -> Result<()> {
-        let _response = openwx::open_weather_request(
-            self.config.coords,
-            WeatherUnits::Imperial,
-            self.config.api_key.clone(),
+        info!("starting WeatherFrame service");
+
+        info!("creating new inky display");
+        let mut inky = InkyJd79668::new(Jd79668Config::default()).context(
+            "failed to take ownership of hardware peripherals for display communication",
         )?;
 
-        Ok(())
+        info!("initializing inky display");
+        inky.initialize()?;
+
+        loop {
+            info!(
+                "querying OpenWeather for updated weather at position: lat: {:.3}, lon: {:.3}",
+                self.config.coords.lat, self.config.coords.lon
+            );
+            let response = openwx::open_weather_request(
+                self.config.coords,
+                WeatherUnits::Imperial,
+                self.config.api_key.clone(),
+            )?;
+
+            // TODO: use the response to a render a new image for the display
+
+            info!("new OpenWeather response: {:#?}", response);
+
+            // 20 minutes
+            thread::sleep(Duration::from_secs(1200));
+        }
     }
 }
