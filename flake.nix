@@ -29,6 +29,12 @@
           extensions = [ ]; # e.g. "llvm-tools-preview"
           targets = [ ]; # e.g. "thumbv7em-none-eabihf"
         };
+
+        # Create a rustPlatform using oxalica's toolchain
+        rustPlatform = pkgs.makeRustPlatform {
+          cargo = rust;
+          rustc = rust;
+        };
       in
       {
         devShells.default = pkgs.mkShell {
@@ -43,13 +49,45 @@
 
           # Optional: helpful environment variables for Rust dev
           # RUST_BACKTRACE = "1";
-          RUST_SRC_PATH = pkgs.rustPlatform.rustLibSrc;
+          RUST_SRC_PATH = rustPlatform.rustLibSrc;
 
           shellHook = ''
             echo "🦀 Evolved into a crab again... shit."
             rustc --version
           '';
         };
+
+        packages.default =
+          let
+            # Read the package name and the crate version info from the Cargo.toml
+            cargoToml = builtins.fromTOML (builtins.readFile "${self}/Cargo.toml");
+            crateName = cargoToml.package.name;
+            crateVersion = cargoToml.package.version;
+          in
+          rustPlatform.buildRustPackage {
+            pname = crateName;
+            version = crateVersion;
+            src = self;
+
+            cargoLock = {
+              lockFile = "${self}/Cargo.lock";
+
+              # Nix needs inputs to be content-addressable and git dependencies are not, even for fixed revs in
+              # your Cargo.toml so we need to specify these.
+              outputHashes = {
+                "libtatted-0.1.0" = "sha256-lT3NI/VJArANsZ12fAjCIF13sBjQuLoRkVuAeyhHGYA=";
+                "openwx-0.1.0" = "sha256-HA+B4J3MQ3l+bfOLJKAwDOZrBH6XsYaqFwdn7UTUoS0=";
+              };
+            };
+
+            nativeBuildInputs = with pkgs; [
+              pkg-config
+            ];
+
+            buildInputs = with pkgs; [
+              openssl
+            ];
+          };
 
         formatter = pkgs.nixfmt-tree;
       }
