@@ -4,7 +4,7 @@ use libtatted::{InkyJd79668, Jd79668Config};
 use log::{info, warn};
 use openwx::WeatherUnits;
 use std::thread;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 pub struct WeatherFrameService {
     config: ServiceConfig,
@@ -30,8 +30,8 @@ impl WeatherFrameService {
         let api_key = self.config.read_api_key()?;
 
         // Main program loop
-        let interval = Duration::from_secs(1); // TODO (tff): pull in the desired interval from the config
-        let mut next_refresh = std::time::Instant::now() + interval;
+        let interval = self.config.refresh_interval;
+        let mut next_refresh = Instant::now() + interval;
 
         loop {
             info!(
