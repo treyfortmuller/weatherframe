@@ -21,12 +21,15 @@
     flake-utils.lib.eachSystem [ "aarch64-linux" "x86_64-linux" ] (
       system:
       let
-        overlays = [ rust-overlay.overlays.default ];
-        pkgs = import nixpkgs { inherit system overlays; };
+        pkgs = import nixpkgs {
+          inherit system;
+          overlays = [ rust-overlay.overlays.default ];
+        };
 
         rust = pkgs.rust-bin.stable.latest.default.override {
-          # Optional extensions can be added here
-          extensions = [ ]; # e.g. "llvm-tools-preview"
+          # rust-src is required for ctrl+clicking into standard library functions using RUST_SRC_PATH
+          # rust-bin from oxalica is pre-built binary distribution and doesn't include src by default.
+          extensions = [ "rust-src" ];
           targets = [ ]; # e.g. "thumbv7em-none-eabihf"
         };
 
@@ -47,9 +50,11 @@
             wkhtmltopdf
           ];
 
-          # Optional: helpful environment variables for Rust dev
+          # Optional, useful sometimes
           # RUST_BACKTRACE = "1";
-          RUST_SRC_PATH = rustPlatform.rustLibSrc;
+
+          # Ctrl+click on the standard library
+          RUST_SRC_PATH = "${rust}/lib/rustlib/src/rust";
 
           shellHook = ''
             echo "🦀 Evolved into a crab again... shit."
@@ -80,13 +85,8 @@
               };
             };
 
-            nativeBuildInputs = with pkgs; [
-              pkg-config
-            ];
-
-            buildInputs = with pkgs; [
-              openssl
-            ];
+            nativeBuildInputs = [ pkgs.pkg-config ];
+            buildInputs = [ pkgs.openssl ];
           };
 
         formatter = pkgs.nixfmt-tree;
