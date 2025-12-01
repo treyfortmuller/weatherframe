@@ -1,3 +1,4 @@
+use anyhow::Context;
 use anyhow::Result;
 use camino::Utf8PathBuf;
 use libtatted::Jd79668Config;
@@ -45,19 +46,25 @@ impl ServiceConfig {
         let reader = BufReader::new(file);
 
         // Read JSON object
-        let config: ServiceConfig = serde_json::from_reader(reader)?;
+        let config: ServiceConfig =
+            serde_json::from_reader(reader).context("failed to read and parse config file")?;
 
         // Configuration validation steps
-        config.coords.validate()?;
+        config
+            .coords
+            .validate()
+            .context("weather polling coordinates failed validation")?;
 
         // Make sure we can read in the API key from the configured path
-        let _: String = std::fs::read_to_string(&config.api_key_path)?;
+        let _: String = std::fs::read_to_string(&config.api_key_path)
+            .context("failed to read OpenWeather API key")?;
 
         Ok(config)
     }
 
     pub fn read_api_key(&self) -> Result<Secret<String>> {
-        let key: String = std::fs::read_to_string(&self.api_key_path)?;
+        let key: String = std::fs::read_to_string(&self.api_key_path)
+            .context("failed to read OpenWeather API key")?;
         Ok(Secret::from(key))
     }
 }
