@@ -26,6 +26,9 @@ impl WeatherFrameService {
         info!("initializing inky display");
         inky.initialize()?;
 
+        // Read in the API key
+        let api_key = self.config.read_api_key()?;
+
         // Main program loop
         let interval = Duration::from_secs(1); // TODO (tff): pull in the desired interval from the config
         let mut next_refresh = std::time::Instant::now() + interval;
@@ -35,10 +38,11 @@ impl WeatherFrameService {
                 "querying OpenWeather for updated weather at position: lat: {:.3}, lon: {:.3}",
                 self.config.coords.lat, self.config.coords.lon
             );
+
             let response = openwx::open_weather_request(
                 self.config.coords,
                 WeatherUnits::Imperial,
-                self.config.api_key.expose_secret().clone(),
+                api_key.expose_secret().clone(),
             )?;
 
             // TODO: use the response to a render a new image for the display
